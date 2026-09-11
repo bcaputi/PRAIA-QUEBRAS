@@ -84,6 +84,7 @@ lançamentos.
 - **PIN por funcionário** em vez de digitar o nome — some erro de digitação e trava quem lança.
 - 
 - **Foto opcional** na quebra (comprovação do que foi descartado).
+- 
 - **Baixa automática no Colibri**: hoje o relatório gera CSV; se o Colibri aceitar import, dá
   pra formatar o CSV no layout exato dele.
 - **Meta/alerta de perda**: avisar quando a perda do mês passar de X% do custo.
