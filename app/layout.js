@@ -1,8 +1,12 @@
 import './globals.css';
 
 export const metadata = {
-  title: 'Praia — Perdas & Produção',
+  title: 'Praia da Tiquatira — Perdas & Produção',
   description: 'Registro de quebras, buffet, refeição de funcionário e produção',
+  icons: {
+    icon: '/icon.png',
+    apple: '/icon.png',
+  },
 };
 
 export const viewport = {

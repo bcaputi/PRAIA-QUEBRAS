@@ -99,7 +99,7 @@ function Login({ onLogin }) {
   return (
     <div className="login-screen">
       <div className="login-card">
-        <div className="brand">🏖️ Praia</div>
+        <img className="brand-logo" src="/logo.png" alt="Praia da Tiquatira" />
         <PinPad
           onSubmit={submit}
           loading={loading}
@@ -184,8 +184,39 @@ function LancamentoForm({ tipo, items, func, onSaved }) {
   const [obs, setObs] = useState('');
   const [data, setData] = useState(today());
   const [saving, setSaving] = useState(false);
+  const [foto, setFoto] = useState(null);
 
   const custoTotal = sel ? (Number(qtd) || 0) * Number(sel.custo || 0) : 0;
+
+  // Comprime a foto no navegador antes de salvar (reduz muito o tamanho)
+  function onFoto(e) {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        const max = 1000;
+        let { width, height } = img;
+        if (width > max || height > max) {
+          if (width > height) {
+            height = Math.round((height * max) / width);
+            width = max;
+          } else {
+            width = Math.round((width * max) / height);
+            height = max;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        setFoto(canvas.toDataURL('image/jpeg', 0.6));
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
 
   async function submit() {
     if (!sel || !qtd) return;
@@ -200,6 +231,7 @@ function LancamentoForm({ tipo, items, func, onSaved }) {
       motivo: tipo === 'QUEBRA' ? motivo : null,
       responsavel: func.nome,
       observacao: obs || null,
+      foto: tipo === 'QUEBRA' ? foto : null,
       data,
     };
     const r = await fetch('/api/registros', {
@@ -212,6 +244,7 @@ function LancamentoForm({ tipo, items, func, onSaved }) {
       setSel(null);
       setQtd('');
       setObs('');
+      setFoto(null);
       onSaved();
     } else {
       alert('Erro ao salvar. Tente de novo.');
@@ -273,6 +306,31 @@ function LancamentoForm({ tipo, items, func, onSaved }) {
           <label>Observação (opcional)</label>
           <textarea value={obs} onChange={(e) => setObs(e.target.value)} />
 
+          {tipo === 'QUEBRA' && (
+            <>
+              <label>Foto (opcional)</label>
+              {foto ? (
+                <div className="foto-preview">
+                  <img src={foto} alt="foto da quebra" />
+                  <span className="foto-x" onClick={() => setFoto(null)}>
+                    remover foto
+                  </span>
+                </div>
+              ) : (
+                <label className="foto-btn">
+                  📷 Tirar / anexar foto
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={onFoto}
+                    hidden
+                  />
+                </label>
+              )}
+            </>
+          )}
+
           {custoTotal > 0 && (
             <div className="custo-line">Custo estimado: {money(custoTotal)}</div>
           )}
@@ -314,11 +372,18 @@ function LancamentoList({ tipo, refresh, onChanged }) {
       {rows.length === 0 && <div className="empty">Nada lançado hoje ainda.</div>}
       {rows.map((r) => (
         <div className="item-log" key={r.id}>
-          <div className="l">
-            <div className="n">{r.nome}</div>
-            <div className="m">
-              {r.motivo ? r.motivo + ' · ' : ''}
-              {r.responsavel || 'sem responsável'}
+          <div className="l" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {r.foto && (
+              <a href={r.foto} target="_blank" rel="noreferrer">
+                <img className="log-thumb" src={r.foto} alt="foto" />
+              </a>
+            )}
+            <div>
+              <div className="n">{r.nome}</div>
+              <div className="m">
+                {r.motivo ? r.motivo + ' · ' : ''}
+                {r.responsavel || 'sem responsável'}
+              </div>
             </div>
           </div>
           <div className="r">
@@ -993,9 +1058,12 @@ export default function Page() {
     <div className="app">
       <header>
         <div className="head-row">
-          <div>
-            <h1>Praia · Perdas & Produção</h1>
-            <div className="sub">{items.length} itens · custos do Colibri</div>
+          <div className="head-title">
+            <img className="head-logo" src="/logo.png" alt="Praia da Tiquatira" />
+            <div>
+              <h1>Perdas &amp; Produção</h1>
+              <div className="sub">{items.length} itens · custos do Colibri</div>
+            </div>
           </div>
           <div className="user-box">
             <div className="uname">{func.nome}</div>

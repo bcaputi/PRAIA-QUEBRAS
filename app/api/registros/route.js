@@ -37,11 +37,11 @@ export async function POST(request) {
 
     const [row] = await sql`
       INSERT INTO registros
-        (tipo, codigo, nome, unidade, quantidade, custo_unit, custo_total, motivo, responsavel, observacao, data)
+        (tipo, codigo, nome, unidade, quantidade, custo_unit, custo_total, motivo, responsavel, observacao, foto, data)
       VALUES
         (${b.tipo}, ${b.codigo || null}, ${b.nome}, ${b.unidade || null}, ${qtd},
          ${custoUnit}, ${custoTotal}, ${b.motivo || null}, ${b.responsavel || null},
-         ${b.observacao || null}, ${data})
+         ${b.observacao || null}, ${b.foto || null}, ${data})
       RETURNING *`;
     return Response.json(row);
   } catch (e) {
