@@ -7,6 +7,7 @@ const TABS = [
   { id: 'BUFFET', label: '🍽️ Buffet' },
   { id: 'REFEICAO', label: '👥 Refeição Func.' },
   { id: 'PRODUCAO', label: '🍳 Produção' },
+  { id: 'HISTORICO', label: '🕘 Histórico' },
   { id: 'DASHBOARD', label: '📊 Dashboard' },
   { id: 'RELATORIO', label: '📋 Relatório' },
 ];
@@ -615,6 +616,109 @@ function ProducaoList({ refresh, onChanged }) {
   );
 }
 
+// ---------- Histórico (lançamentos individuais de qualquer período, com foto) ----------
+function Historico() {
+  const [de, setDe] = useState(firstOfMonth());
+  const [ate, setAte] = useState(today());
+  const [tipo, setTipo] = useState('TODOS');
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  async function load() {
+    setLoading(true);
+    const qs = new URLSearchParams({ de, ate });
+    if (tipo !== 'TODOS') qs.set('tipo', tipo);
+    const r = await fetch(`/api/registros?${qs.toString()}`).then((x) => x.json());
+    setRows(Array.isArray(r) ? r : []);
+    setLoading(false);
+  }
+  useEffect(() => {
+    load();
+  }, []);
+
+  const total = rows.reduce((s, r) => s + Number(r.custo_total || 0), 0);
+
+  return (
+    <>
+      <div className="card">
+        <h2>Histórico de lançamentos</h2>
+        <div className="filters">
+          <div>
+            <label>Tipo</label>
+            <select value={tipo} onChange={(e) => setTipo(e.target.value)}>
+              <option value="TODOS">Todos</option>
+              <option value="QUEBRA">Quebra</option>
+              <option value="BUFFET">Buffet</option>
+              <option value="REFEICAO">Refeição</option>
+            </select>
+          </div>
+          <div>
+            <label>De</label>
+            <input type="date" value={de} onChange={(e) => setDe(e.target.value)} />
+          </div>
+          <div>
+            <label>Até</label>
+            <input type="date" value={ate} onChange={(e) => setAte(e.target.value)} />
+          </div>
+          <button className="btn small" style={{ height: 44 }} onClick={load}>
+            Buscar
+          </button>
+        </div>
+      </div>
+
+      <div className="card">
+        <h2>
+          {rows.length} lançamento{rows.length === 1 ? '' : 's'} · {money(total)}
+        </h2>
+        {loading ? (
+          <div className="empty">Carregando...</div>
+        ) : rows.length === 0 ? (
+          <div className="empty">Nada encontrado no período.</div>
+        ) : (
+          <div className="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Foto</th>
+                  <th>Data</th>
+                  <th>Item</th>
+                  <th className="num">Qtd</th>
+                  <th>Motivo</th>
+                  <th>Responsável</th>
+                  <th className="num">Custo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r) => (
+                  <tr key={r.id}>
+                    <td>
+                      {r.foto ? (
+                        <a href={r.foto} target="_blank" rel="noreferrer">
+                          <img className="log-thumb" src={r.foto} alt="foto" />
+                        </a>
+                      ) : (
+                        '—'
+                      )}
+                    </td>
+                    <td>{r.data}</td>
+                    <td style={{ textTransform: 'capitalize' }}>{r.nome}</td>
+                    <td className="num">
+                      {num(r.quantidade)} {r.unidade}
+                    </td>
+                    <td>{r.motivo || '—'}</td>
+                    <td>{r.responsavel || '—'}</td>
+                    <td className="num">{money(r.custo_total)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
 // ---------- Dashboard ----------
 function Dashboard() {
   const [de, setDe] = useState(firstOfMonth());
@@ -755,12 +859,20 @@ function Relatorio() {
   const [ate, setAte] = useState(today());
   const [tipo, setTipo] = useState('QUEBRA');
   const [rows, setRows] = useState([]);
+  const [prodRows, setProdRows] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  const isProducao = tipo === 'PRODUCAO';
 
   async function load() {
     setLoading(true);
-    const r = await fetch(`/api/registros?tipo=${tipo}&de=${de}&ate=${ate}`).then((x) => x.json());
-    setRows(Array.isArray(r) ? r : []);
+    if (tipo === 'PRODUCAO') {
+      const r = await fetch(`/api/producao?de=${de}&ate=${ate}`).then((x) => x.json());
+      setProdRows(Array.isArray(r) ? r : []);
+    } else {
+      const r = await fetch(`/api/registros?tipo=${tipo}&de=${de}&ate=${ate}`).then((x) => x.json());
+      setRows(Array.isArray(r) ? r : []);
+    }
     setLoading(false);
   }
   useEffect(() => {
@@ -781,8 +893,31 @@ function Relatorio() {
 
   const totalQtd = grouped.reduce((s, g) => s + g.qtd, 0);
   const totalCusto = grouped.reduce((s, g) => s + g.custo, 0);
+  const totalCustoProd = prodRows.reduce((s, p) => s + Number(p.custo_total || 0), 0);
 
   function exportCSV() {
+    if (isProducao) {
+      const head = ['PRODUTO', 'RENDIMENTO', 'UNIDADE', 'RESPONSAVEL', 'CUSTO_TOTAL', 'DATA'];
+      const lines = prodRows.map((p) =>
+        [
+          p.produto,
+          num(p.quantidade_produzida),
+          p.unidade,
+          p.responsavel,
+          Number(p.custo_total || 0).toFixed(2),
+          p.data,
+        ]
+          .map((v) => `"${String(v ?? '').replace(/"/g, '""')}"`)
+          .join(';')
+      );
+      const csv = [head.join(';'), ...lines].join('\n');
+      const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `producao_${de}_a_${ate}.csv`;
+      a.click();
+      return;
+    }
     const head = ['CODIGO', 'PRODUTO', 'UNIDADE', 'QUANTIDADE', 'CUSTO_TOTAL', 'TIPO', 'PERIODO'];
     const lines = grouped.map((g) =>
       [g.codigo, g.nome, g.unidade, num(g.qtd), g.custo.toFixed(2), tipo, `${de} a ${ate}`]
@@ -808,6 +943,7 @@ function Relatorio() {
               <option value="QUEBRA">Quebras</option>
               <option value="BUFFET">Buffet</option>
               <option value="REFEICAO">Refeição funcionário</option>
+              <option value="PRODUCAO">Produção</option>
             </select>
           </div>
           <div>
@@ -821,47 +957,91 @@ function Relatorio() {
         </div>
         <div className="row" style={{ marginTop: 12 }}>
           <button className="btn small" onClick={load}>Gerar</button>
-          <button className="btn small gray" onClick={exportCSV} disabled={!grouped.length}>
+          <button
+            className="btn small gray"
+            onClick={exportCSV}
+            disabled={isProducao ? !prodRows.length : !grouped.length}
+          >
             Exportar CSV
           </button>
         </div>
       </div>
 
-      <div className="card">
-        <h2>
-          Resumo por item · {num(totalQtd)} un · {money(totalCusto)}
-        </h2>
-        {loading ? (
-          <div className="empty">Carregando...</div>
-        ) : grouped.length === 0 ? (
-          <div className="empty">Nada no período.</div>
-        ) : (
-          <div className="table-scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th>Cód</th>
-                  <th>Produto</th>
-                  <th className="num">Qtd</th>
-                  <th className="num">Custo</th>
-                </tr>
-              </thead>
-              <tbody>
-                {grouped.map((g, i) => (
-                  <tr key={i}>
-                    <td>{g.codigo}</td>
-                    <td style={{ textTransform: 'capitalize' }}>{g.nome}</td>
-                    <td className="num">
-                      {num(g.qtd)} {g.unidade}
-                    </td>
-                    <td className="num">{money(g.custo)}</td>
+      {isProducao ? (
+        <div className="card">
+          <h2>
+            Produções · {prodRows.length} · {money(totalCustoProd)}
+          </h2>
+          {loading ? (
+            <div className="empty">Carregando...</div>
+          ) : prodRows.length === 0 ? (
+            <div className="empty">Nada no período.</div>
+          ) : (
+            <div className="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Produto</th>
+                    <th className="num">Rendimento</th>
+                    <th>Responsável</th>
+                    <th className="num">Custo total</th>
+                    <th>Data</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+                </thead>
+                <tbody>
+                  {prodRows.map((p) => (
+                    <tr key={p.id}>
+                      <td style={{ textTransform: 'capitalize' }}>{p.produto}</td>
+                      <td className="num">
+                        {num(p.quantidade_produzida)} {p.unidade}
+                      </td>
+                      <td>{p.responsavel || '—'}</td>
+                      <td className="num">{money(p.custo_total)}</td>
+                      <td>{p.data}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="card">
+          <h2>
+            Resumo por item · {num(totalQtd)} un · {money(totalCusto)}
+          </h2>
+          {loading ? (
+            <div className="empty">Carregando...</div>
+          ) : grouped.length === 0 ? (
+            <div className="empty">Nada no período.</div>
+          ) : (
+            <div className="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Cód</th>
+                    <th>Produto</th>
+                    <th className="num">Qtd</th>
+                    <th className="num">Custo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {grouped.map((g, i) => (
+                    <tr key={i}>
+                      <td>{g.codigo}</td>
+                      <td style={{ textTransform: 'capitalize' }}>{g.nome}</td>
+                      <td className="num">
+                        {num(g.qtd)} {g.unidade}
+                      </td>
+                      <td className="num">{money(g.custo)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
     </>
   );
 }
@@ -1099,6 +1279,7 @@ export default function Page() {
             <ProducaoList refresh={refresh} onChanged={bump} />
           </>
         )}
+        {tab === 'HISTORICO' && <Historico />}
         {tab === 'DASHBOARD' && <Dashboard />}
         {tab === 'RELATORIO' && <Relatorio />}
         {tab === 'CONFIG' && func.admin && <ConfigFuncionarios func={func} />}
