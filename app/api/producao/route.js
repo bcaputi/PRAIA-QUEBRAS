@@ -63,6 +63,18 @@ export async function POST(request) {
   }
 }
 
+// PATCH /api/producao  -> marca/desmarca baixado no Colibri
+export async function PATCH(request) {
+  try {
+    const b = await request.json();
+    const id = Number(b.id);
+    const [row] = await sql`UPDATE producoes SET baixado=${!!b.baixado} WHERE id=${id} RETURNING *`;
+    return Response.json(row);
+  } catch (e) {
+    return Response.json({ error: String(e) }, { status: 500 });
+  }
+}
+
 // DELETE /api/producao?id=123
 export async function DELETE(request) {
   try {

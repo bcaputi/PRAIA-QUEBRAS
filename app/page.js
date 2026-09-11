@@ -364,6 +364,15 @@ function LancamentoList({ tipo, refresh, onChanged }) {
     onChanged && onChanged();
   }
 
+  async function toggleBaixado(r) {
+    setRows((rs) => rs.map((x) => (x.id === r.id ? { ...x, baixado: !r.baixado } : x)));
+    await fetch('/api/registros', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: r.id, baixado: !r.baixado }),
+    });
+  }
+
   if (!rows) return <div className="card empty">Carregando...</div>;
   const total = rows.reduce((s, r) => s + Number(r.custo_total || 0), 0);
 
@@ -372,7 +381,7 @@ function LancamentoList({ tipo, refresh, onChanged }) {
       <h2>Lançados hoje ({rows.length})</h2>
       {rows.length === 0 && <div className="empty">Nada lançado hoje ainda.</div>}
       {rows.map((r) => (
-        <div className="item-log" key={r.id}>
+        <div className={'item-log' + (r.baixado ? ' baixado' : '')} key={r.id}>
           <div className="l" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             {r.foto && (
               <a href={r.foto} target="_blank" rel="noreferrer">
@@ -392,6 +401,14 @@ function LancamentoList({ tipo, refresh, onChanged }) {
               <b>{num(r.quantidade)}</b> {r.unidade}
             </div>
             <div>{money(r.custo_total)}</div>
+            <label className="check-baixado">
+              <input
+                type="checkbox"
+                checked={!!r.baixado}
+                onChange={() => toggleBaixado(r)}
+              />
+              Baixado
+            </label>
             <div className="del" onClick={() => del(r.id)}>
               excluir
             </div>
@@ -585,13 +602,26 @@ function ProducaoList({ refresh, onChanged }) {
     onChanged && onChanged();
   }
 
+  async function toggleBaixado(p) {
+    setRows((rs) => rs.map((x) => (x.id === p.id ? { ...x, baixado: !p.baixado } : x)));
+    await fetch('/api/producao', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: p.id, baixado: !p.baixado }),
+    });
+  }
+
   if (!rows) return <div className="card empty">Carregando...</div>;
   return (
     <div className="card">
       <h2>Produções do mês ({rows.length})</h2>
       {rows.length === 0 && <div className="empty">Nenhuma produção lançada ainda.</div>}
       {rows.map((p) => (
-        <div key={p.id} style={{ borderBottom: '1px solid #f1f5f9', padding: '10px 0' }}>
+        <div
+          key={p.id}
+          className={p.baixado ? 'baixado' : ''}
+          style={{ borderBottom: '1px solid #f1f5f9', padding: '10px 0' }}
+        >
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <div>
               <div className="n" style={{ fontWeight: 700, textTransform: 'capitalize' }}>
@@ -604,6 +634,14 @@ function ProducaoList({ refresh, onChanged }) {
             </div>
             <div style={{ textAlign: 'right' }}>
               <div>{money(p.custo_total)}</div>
+              <label className="check-baixado">
+                <input
+                  type="checkbox"
+                  checked={!!p.baixado}
+                  onChange={() => toggleBaixado(p)}
+                />
+                Baixado
+              </label>
               <div className="del" onClick={() => del(p.id)}>excluir</div>
             </div>
           </div>
@@ -637,6 +675,15 @@ function Historico() {
   }, []);
 
   const total = rows.reduce((s, r) => s + Number(r.custo_total || 0), 0);
+
+  async function toggleBaixado(r) {
+    setRows((rs) => rs.map((x) => (x.id === r.id ? { ...x, baixado: !r.baixado } : x)));
+    await fetch('/api/registros', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: r.id, baixado: !r.baixado }),
+    });
+  }
 
   return (
     <>
@@ -686,11 +733,12 @@ function Historico() {
                   <th>Motivo</th>
                   <th>Responsável</th>
                   <th className="num">Custo</th>
+                  <th>Baixado</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((r) => (
-                  <tr key={r.id}>
+                  <tr key={r.id} className={r.baixado ? 'baixado' : ''}>
                     <td>
                       {r.foto ? (
                         <a href={r.foto} target="_blank" rel="noreferrer">
@@ -708,6 +756,13 @@ function Historico() {
                     <td>{r.motivo || '—'}</td>
                     <td>{r.responsavel || '—'}</td>
                     <td className="num">{money(r.custo_total)}</td>
+                    <td>
+                      <input
+                        type="checkbox"
+                        checked={!!r.baixado}
+                        onChange={() => toggleBaixado(r)}
+                      />
+                    </td>
                   </tr>
                 ))}
               </tbody>

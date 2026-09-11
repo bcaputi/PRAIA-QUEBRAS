@@ -41,6 +41,8 @@ CREATE TABLE IF NOT EXISTS registros (
   motivo       TEXT,                         -- só QUEBRA
   responsavel  TEXT,
   observacao   TEXT,
+  foto         TEXT,                         -- foto (data URL), só QUEBRA
+  baixado      BOOLEAN NOT NULL DEFAULT FALSE, -- conferido/baixado no Colibri
   data         DATE NOT NULL DEFAULT CURRENT_DATE,
   created_at   TIMESTAMPTZ DEFAULT NOW()
 );
@@ -57,6 +59,7 @@ CREATE TABLE IF NOT EXISTS producoes (
   responsavel           TEXT,
   observacao            TEXT,
   custo_total           NUMERIC DEFAULT 0,  -- soma dos insumos
+  baixado               BOOLEAN NOT NULL DEFAULT FALSE, -- conferido/baixado no Colibri
   data                  DATE NOT NULL DEFAULT CURRENT_DATE,
   created_at            TIMESTAMPTZ DEFAULT NOW()
 );
