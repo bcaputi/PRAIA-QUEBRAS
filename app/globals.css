@@ -208,6 +208,15 @@ td.num, th.num { text-align: right; }
 }
 .foto-x { display: inline-block; color: var(--danger); font-size: 13px; font-weight: 700; cursor: pointer; margin-top: 6px; }
 .log-thumb { width: 44px; height: 44px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); }
+.log-thumb-btn {
+  width: 44px; height: 44px; border-radius: 8px; border: 1px solid var(--line);
+  background: #f1f5f9; font-size: 20px; cursor: pointer; flex: 0 0 auto;
+}
+
+/* ---- Item sem custo cadastrado (regra 0.7) ---- */
+.sem-custo { color: var(--danger); font-weight: 600; }
+.aviso-parcial { color: var(--danger); font-weight: 600; font-size: 12px; }
+.card.aviso-parcial { display: block; background: #fef2f2; border-color: #fecaca; font-size: 13px; }
 
 /* ---- Baixado (conferido no Colibri) ---- */
 .item-log.baixado, tr.baixado, .baixado { opacity: .5; }

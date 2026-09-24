@@ -1,13 +1,12 @@
 import { sql } from '../../../lib/db';
+import { lerSessao } from '../../../lib/session';
 
 export const dynamic = 'force-dynamic';
 
-// Só admins (identificados pelo header x-admin-pin) podem alterar
+// Só admins (sessão em cookie, não mais um PIN em header) podem alterar
 async function isAdmin(request) {
-  const pin = request.headers.get('x-admin-pin');
-  if (!pin) return false;
-  const r = await sql`SELECT 1 FROM funcionarios WHERE pin = ${pin} AND admin = true AND ativo = true`;
-  return r.length > 0;
+  const sessao = await lerSessao(request);
+  return !!(sessao && sessao.admin);
 }
 
 function unique(e) {
